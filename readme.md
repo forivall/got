@@ -13,7 +13,7 @@
 </div>
 
 
-> Human-friendly and powerful HTTP request library for Node.js
+> Human-friendly and powerful HTTP request library for Node.js  
 > Caseless fork - Preserves the casing of your headers.
 
 [![Build Status: Linux](https://travis-ci.org/forivall/got.svg?branch=caseless)](https://travis-ci.org/forivall/got)
