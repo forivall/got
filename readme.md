@@ -3,6 +3,7 @@
 	<br>
 	<img width="360" src="media/logo.svg" alt="Got">
 	<br>
+	<em><strong>+ caseless</strong></em>
 	<br>
 	<br>
 	<p align="center">Huge thanks to <a href="https://moxy.studio"><img src="https://sindresorhus.com/assets/thanks/moxy-logo.svg" width="150"></a> for sponsoring Sindre Sorhus!
@@ -11,12 +12,14 @@
 	<br>
 </div>
 
-> Human-friendly and powerful HTTP request library for Node.js
 
-[![Build Status: Linux](https://travis-ci.org/sindresorhus/got.svg?branch=master)](https://travis-ci.org/sindresorhus/got)
-[![Coverage Status](https://coveralls.io/repos/github/sindresorhus/got/badge.svg?branch=master)](https://coveralls.io/github/sindresorhus/got?branch=master)
-[![Downloads](https://img.shields.io/npm/dm/got.svg)](https://npmjs.com/got)
-[![Install size](https://packagephobia.now.sh/badge?p=got)](https://packagephobia.now.sh/result?p=got)
+> Human-friendly and powerful HTTP request library for Node.js
+> Caseless fork - Preserves the casing of your headers.
+
+[![Build Status: Linux](https://travis-ci.org/forivall/got.svg?branch=caseless)](https://travis-ci.org/forivall/got)
+[![Coverage Status](https://coveralls.io/repos/github/forivall/got/badge.svg?branch=caseless)](https://coveralls.io/github/forivall/got?branch=caseless)
+[![Downloads](https://img.shields.io/npm/dm/got-caseless.svg)](https://npmjs.com/got-caseless)
+[![Install size](https://packagephobia.now.sh/badge?p=got-caseless)](https://packagephobia.now.sh/result?p=got-caseless)
 
 [Moving from Request?](documentation/migration-guides.md) [*(Note that Request is unmaintained)*](https://github.com/request/request/issues/3142)
 
