@@ -1,6 +1,6 @@
 {
 	"name": "got-caseless",
-	"version": "10.5.6",
+	"version": "10.5.7",
 	"description": "Human-friendly and powerful HTTP request library for Node.js. Fork that uses caseless instead of lowercase-keys for headers.",
 	"license": "MIT",
 	"repository": "forivall/got",
