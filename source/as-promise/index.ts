@@ -29,8 +29,8 @@ export default function asPromise<T>(options: NormalizedOptions): CancelableRequ
 
 	const promise = new PCancelable<T>((resolve, reject, onCancel) => {
 		const makeRequest = (): void => {
-			if (options.responseType === 'json' && options.headers.accept === undefined) {
-				options.headers.accept = 'application/json';
+			if (options.responseType === 'json' && options.getHeader('accept') === undefined) {
+				options.setHeader('accept', 'application/json');
 			}
 
 			// Support retries
@@ -227,8 +227,8 @@ export default function asPromise<T>(options: NormalizedOptions): CancelableRequ
 	};
 
 	promise.json = () => {
-		if (body === undefined && options.headers.accept === undefined) {
-			options.headers.accept = 'application/json';
+		if (body === undefined && options.getHeader('accept') === undefined) {
+			options.setHeader('accept', 'application/json');
 		}
 
 		return shortcut('json');

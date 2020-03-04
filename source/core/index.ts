@@ -13,7 +13,7 @@ import CacheableLookup from 'cacheable-lookup';
 import CacheableRequest = require('cacheable-request');
 // @ts-ignore Missing types
 import http2wrapper = require('http2-wrapper');
-import lowercaseKeys = require('lowercase-keys');
+import caseless = require('caseless');
 import ResponseLike = require('responselike');
 import getStream = require('get-stream');
 import is, {assert} from '@sindresorhus/is';
@@ -169,6 +169,13 @@ export interface NormalizedOptions extends Options {
 	password: string;
 	[kRequest]: HttpRequestFunction;
 	[kIsNormalizedAlready]?: boolean;
+
+	// Caseless headers
+	setHeader(name: string, value: string | string[], clobber?: boolean): string | false;
+	setHeader(headers: Headers): void;
+	hasHeader(name: string): string | false;
+	getHeader(name: string): string | string[] | undefined;
+	removeHeader(name: string): boolean;
 }
 
 export interface Defaults {
@@ -513,10 +520,12 @@ export default class Request extends Duplex implements RequestEvents<Request> {
 
 		this.on('pipe', source => {
 			if (source instanceof IncomingMessage) {
-				this.options.headers = {
-					...source.headers,
-					...this.options.headers
-				};
+				const sourceHeaders = source.headers;
+				for (const k of Object.keys(sourceHeaders)) {
+					if (!this.options.hasHeader(k)) {
+						this.options.setHeader(k, sourceHeaders[k]!);
+					}
+				}
 			}
 		});
 
@@ -630,10 +639,16 @@ export default class Request extends Duplex implements RequestEvents<Request> {
 		}
 
 		// `options.headers`
-		if (is.undefined(options.headers)) {
-			options.headers = {};
-		} else {
-			options.headers = lowercaseKeys({...(defaults?.headers), ...options.headers});
+		// Caseless's typing's second argument is incorrect
+		const {headers} = options;
+		caseless.httpify(options, headers && Object.isFrozen(headers) ? {...headers} : headers!);
+		const defaultsHeaders = defaults?.headers;
+		if (defaultsHeaders) {
+			for (const k of Object.keys(defaultsHeaders)) {
+				if (!(options as NormalizedOptions).hasHeader(k)) {
+					(options as NormalizedOptions).setHeader(k, defaultsHeaders[k]!);
+				}
+			}
 		}
 
 		// Disallow legacy `url.Url`
@@ -845,7 +860,6 @@ export default class Request extends Duplex implements RequestEvents<Request> {
 
 	async _finalizeBody(): Promise<void> {
 		const {options} = this;
-		const {headers} = options;
 
 		const isForm = !is.undefined(options.form);
 		const isJSON = !is.undefined(options.json);
@@ -880,22 +894,22 @@ export default class Request extends Duplex implements RequestEvents<Request> {
 
 			{
 				// Serialize body
-				const noContentType = !is.string(headers['content-type']);
+				const noContentType = !is.string(options.getHeader('content-type'));
 
 				if (isBody) {
 					// Special case for https://github.com/form-data/form-data
 					if (isFormData(options.body) && noContentType) {
-						headers['content-type'] = `multipart/form-data; boundary=${options.body.getBoundary()}`;
+						options.setHeader('content-type', `multipart/form-data; boundary=${options.body.getBoundary()}`);
 					}
 				} else if (isForm) {
 					if (noContentType) {
-						headers['content-type'] = 'application/x-www-form-urlencoded';
+						options.setHeader('content-type', 'application/x-www-form-urlencoded');
 					}
 
 					options.body = (new URLSearchParams(options.form as Record<string, string>)).toString();
 				} else {
 					if (noContentType) {
-						headers['content-type'] = 'application/json';
+						options.setHeader('content-type', 'application/json');
 					}
 
 					options.body = JSON.stringify(options.json);
@@ -912,9 +926,9 @@ export default class Request extends Duplex implements RequestEvents<Request> {
 				// Content-Length header field when the request message does not contain
 				// a payload body and the method semantics do not anticipate such a
 				// body.
-				if (is.undefined(headers['content-length']) && is.undefined(headers['transfer-encoding'])) {
+				if (is.undefined(options.getHeader('content-length')) && is.undefined(options.getHeader('transfer-encoding'))) {
 					if (!cannotHaveBody && !is.undefined(uploadBodySize)) {
-						headers['content-length'] = String(uploadBodySize);
+						options.setHeader('content-length', String(uploadBodySize));
 					}
 				}
 			}
@@ -924,7 +938,7 @@ export default class Request extends Duplex implements RequestEvents<Request> {
 			this._unlockWrite();
 		}
 
-		this[kBodySize] = Number(headers['content-length']) || undefined;
+		this[kBodySize] = Number(options.getHeader('content-length')) || undefined;
 	}
 
 	async _onResponse(response: IncomingMessage): Promise<void> {
@@ -1011,12 +1025,16 @@ export default class Request extends Duplex implements RequestEvents<Request> {
 
 				// Redirecting to a different site, clear sensitive data.
 				if (redirectUrl.hostname !== url.hostname) {
-					if ('cookie' in options.headers) {
-						delete options.headers.cookie;
+					const cookieHeader = options.hasHeader('cookie');
+					if (cookieHeader) {
+						// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+						delete options.headers[cookieHeader];
 					}
 
-					if ('authorization' in options.headers) {
-						delete options.headers.authorization;
+					const authHeader = options.hasHeader('authorization');
+					if (authHeader) {
+						// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+						delete options.headers[authHeader];
 					}
 
 					if (options.username || options.password) {
@@ -1175,8 +1193,8 @@ export default class Request extends Duplex implements RequestEvents<Request> {
 			}
 		}
 
-		if (options.decompress && is.undefined(headers['accept-encoding'])) {
-			headers['accept-encoding'] = supportsBrotli ? 'gzip, deflate, br' : 'gzip, deflate';
+		if (options.decompress && is.undefined(options.getHeader('accept-encoding'))) {
+			options.setHeader('accept-encoding', supportsBrotli ? 'gzip, deflate, br' : 'gzip, deflate');
 		}
 
 		// Set cookies
@@ -1184,7 +1202,7 @@ export default class Request extends Duplex implements RequestEvents<Request> {
 			const cookieString: string = await options.cookieJar.getCookieString(options.url.toString());
 
 			if (is.nonEmptyString(cookieString)) {
-				options.headers.cookie = cookieString;
+				options.setHeader('cookie', cookieString);
 			}
 		}
 
