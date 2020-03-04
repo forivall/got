@@ -931,7 +931,7 @@ const mutableGot = got.extend({mutableDefaults: true});
 const mergedHandlers = got.extend({
 	handlers: [
 		(options, next) => {
-			options.getHeader('referer');
+			options.removeHeader('referer');
 
 			return next(options);
 		}
